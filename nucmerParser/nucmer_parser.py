@@ -1,13 +1,23 @@
 from Bio import SeqIO
 from collections import defaultdict
 
+import os
 import sys
-sys.path.append('SPAdes-Contig-Graph')
-from spades_contig_graph import load_contigs
+sys.path.append('../SPAdes-Contig-Graph')
+import spades_contig_graph
 
 
 __contigsFile = "../../runs/contigs_corrector.fasta"
 __snpsFile = "../../runs/contigs_corrector.used_snps"
+__linksFile = "../../runs/contigs.fastg"
+__pathsFile = "../../runs/contigs.paths"
+
+
+#__contigsFile = "../../runs/pilon.fasta"
+#__snpsFile = "../../runs/pilon.used_snps"
+
+#__contigsFile = "../../runs/ecoli.contigs.fasta"
+#__snpsFile = "../../runs/ecoli-contigs.used_snps"
 
 class Pos:
     def __init__(self, name, pos, char):
@@ -133,6 +143,29 @@ def printSnps(snps, contigsDict):
     printPart(snps, contigsDict)
     print()
 
+def getComplementNode(node_name):
+    if (node_name[-1] == "'"):
+        return node_name[:-1]
+    else:
+        return node_name + "'";
+
+links = spades_contig_graph.load_graph_links(__linksFile)
+contigs = spades_contig_graph.load_contigs(__contigsFile)
+paths = spades_contig_graph.load_paths(os.path.abspath(__pathsFile), links)
+
+for key, value in links.items():
+    print(str(key) + ": " + str(value))
+    print()
+
+
+for contig in contigs:
+    print(type(contig))
+    print()
+
+for key, value in paths.items():
+    print(str(key) + ": " + str(value))
+    print()
+
 def main():
     print(len(Parser.reference.seq))
     
@@ -149,7 +182,7 @@ def main():
             printSnps(snps, contigsDict)
         print("}")
         print()
-    
         
 if __name__ == "__main__":
-    main()
+    pass
+    #main()
