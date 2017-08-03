@@ -9,7 +9,7 @@ cd $outDir
 runDir=$(pwd)
 
 bwa index $contigs
-bwa mem $contigs $file1 $file2 -t 16 -a > aln.sam
+bwa mem $contigs $file1 $file2 -t 16 > aln.sam
 
 samtools view -Sb aln.sam -@ 16 > aln.bam
 samtools sort aln.bam aln.sorted -@ 16
