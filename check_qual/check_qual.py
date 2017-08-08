@@ -33,8 +33,8 @@ ecoli400K = Dataset("/home/maxim/Documents/intership/runs/ecoli/ecoli400K/spades
 
 spades_dir = "/home/maxim/Documents/intership/algorithmic-biology"
 pwd = os.path.dirname(__file__)
-mismatch_rate = 0.00
-indel_rate = 0.00
+mismatch_rate = 0
+indel_rate = 0
 dataset = ecoli400K
 
 contigs_file = pwd + "/contigs.fasta"
@@ -132,7 +132,7 @@ class SpadesCorrector(Corrector):
         with open(self._corrector_config, 'w') as config:
             config.write('"bwa": "{}/assembler/bin/bwa-spades"\n'.format(spades_dir))
             config.write('"dataset": "{}"\n'.format(yml_file))
-            config.write('"max_nthreads": !!int "16"\n')
+            config.write('"max_nthreads": !!int "7"\n')
             config.write('"output_dir": "{}"\n'.format(self.outdir))
             config.write('"strategy": "majority_only"\n')
             config.write('"work_dir": "{}"\n'.format(self._corrector_tmp))
@@ -175,7 +175,7 @@ def main():
     #pilon2.run()
     #pilon2.show_snps()
 
-    corrector1.clean()
+    #corrector1.clean()
     #corrector2.clean()
     pilon1.clean()
     #pilon2.clean()
@@ -190,7 +190,7 @@ def test():
         print(chars2)
 
     for i in range(2):
-        gen = ErrorGenerator(mismatch_rate, 0, indel_rate)
+        gen = ErrorGenerator(mismatch_rate, indel_rate / 2, indel_rate / 2)
         subtest(chars, gen.gen_errors)
 
     print()
