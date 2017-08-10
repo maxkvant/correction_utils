@@ -7,8 +7,8 @@ __pathsFile = "../../runs/contigs.paths"
 
 
 #__contigsFile = "../../runs/pilon.fasta"
-__snpsFile = "/home/maxim/Documents/intership/correction_utils/check_qual/broken/contigs.used_snps"
-__logFile = "../check_qual/corrector1/log.log"
+__snpsFile = "/home/m_vinnichenko/intership/output/R.sphaeroides/assembled_contigs.used_snps"
+__logFile = "/home/m_vinnichenko/intership/output/R.sphaeroides/run27.log"
 
 #__contigsFile = "../../runs/ecoli.contigs.fasta"
 #__snpsFile = "../../runs/ecoli-contigs.used_snps"
@@ -125,7 +125,7 @@ class Parser:
                 return False
             for tag in tags:
                 if tag in line:
-                    return True
+                    return len(line.split(")   ")) == 2
             return False
 
         res = CorrectorLog()
@@ -143,14 +143,14 @@ class Parser:
                     res.interesting[key] = True
 
                 if (tag == changed_tag):
-                    (_, pos, _, _, _, _, coverage, _, contig) = line.split()
+                    (tag, pos, _, _, _, _, coverage, _, contig) = line.split()
                     key = Parser.toKey(contig, pos)
                     res.changed[key] = True
 
 
                 res.coverage[key] = int(coverage)
 
-                #print(tag, key, res.coverage[key], res.interesting[key], res.changed[key], end='\n')
+                print(tag, key, res.coverage[key], res.interesting[key], res.changed[key], end='\n')
         return res
 
 def printSnps(snps):
