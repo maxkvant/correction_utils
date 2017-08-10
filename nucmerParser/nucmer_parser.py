@@ -7,8 +7,10 @@ __pathsFile = "../../runs/contigs.paths"
 
 
 #__contigsFile = "../../runs/pilon.fasta"
-__snpsFile = "/home/m_vinnichenko/intership/output/R.sphaeroides/assembled_contigs.used_snps"
+__snpsFile_before = "/home/m_vinnichenko/intership/output/R.sphaeroides/assembled_contigs.used_snps"
+__snpsFile_after = "/home/m_vinnichenko/intership/output/R.sphaeroides/corrected_contigs.used_snps"
 __logFile = "/home/m_vinnichenko/intership/output/R.sphaeroides/run27.log"
+
 
 #__contigsFile = "../../runs/ecoli.contigs.fasta"
 #__snpsFile = "../../runs/ecoli-contigs.used_snps"
@@ -157,10 +159,10 @@ def printSnps(snps):
     for snp in snps:
         print("    " + str(snp))
 
-def checkLog(snpsFile, logFile):
+def getLogStats(snpsFile, logFile):
     snpsDict = Parser.parseSnps(snpsFile)
     correctorLog = Parser.parseLog(logFile)
-    logStats = defaultdict(list)
+    logStats = defaultdict(set)
 
     for (contig, snps) in snpsDict.items():
         for snp in snps:
@@ -171,8 +173,9 @@ def checkLog(snpsFile, logFile):
             #    print("{} interesting:{} changed:{} coverage:{}".format(key, correctorLog.interesting[key], correctorLog.changed[key], correctorLog.coverage[key]))
             #else:
             #    print("skipped {}".format(key))
+    return logStats
 
-    print()
+def printLogStats(logStats):
     size = sum([len(vals) for (_, vals) in logStats.items()])
     for (key, vals) in logStats.items():
         print("{1} {0}".format(key, len(vals) / size))
@@ -180,8 +183,28 @@ def checkLog(snpsFile, logFile):
             print("   " + str(val))
         print()
 
+def defaultDictSetMinus(dict1, dict2):
+    res = defaultdict(set)
+    for key in dict1:
+        res[key] = dict1[key] - dict2[key]
+    for key in dict2:
+        res[key] = dict1[key] - dict2[key]
+    return res
+
 def main():
-    checkLog(__snpsFile, __logFile)
+    log_stats_before = getLogStats(__snpsFile_before, __logFile)
+    print("========== BEFORE ==========")
+    printLogStats(log_stats_before)
+    log_stats_after = getLogStats(__snpsFile_after, __logFile)
+    print("========== AFTER ==========")
+    printLogStats(log_stats_after)
+
+    print("========== BEFORE - AFTER ==========")
+    printLogStats(defaultDictSetMinus(log_stats_before, log_stats_after))
+
+    print("========== AFTER - BEFORE ==========")
+    printLogStats(defaultDictSetMinus(log_stats_before, log_stats_after))
+
 
 if __name__ == "__main__":
     pass
