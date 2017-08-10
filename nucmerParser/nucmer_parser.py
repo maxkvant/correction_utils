@@ -168,7 +168,7 @@ def getLogStats(snpsFile, logFile):
         for snp in snps:
             pos = snp.contigPos.pos
             key = Parser.toKey(contig, pos)
-            logStats[correctorLog.get(key)].append(key)
+            logStats[correctorLog.get(key)].add(key)
             #if (key in correctorLog.coverage):
             #    print("{} interesting:{} changed:{} coverage:{}".format(key, correctorLog.interesting[key], correctorLog.changed[key], correctorLog.coverage[key]))
             #else:
