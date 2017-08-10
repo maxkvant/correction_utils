@@ -1,11 +1,4 @@
-from Bio import SeqIO
 from collections import defaultdict
-
-import os
-import sys
-sys.path.append('../SPAdes-Contig-Graph')
-import spades_contig_graph
-
 
 __contigsFile = "../../runs/contigs_corrector.fasta"
 __snpsFile = "../../runs/contigs_corrector.used_snps"
@@ -14,7 +7,8 @@ __pathsFile = "../../runs/contigs.paths"
 
 
 #__contigsFile = "../../runs/pilon.fasta"
-#__snpsFile = "../../runs/pilon.used_snps"
+__snpsFile = "/home/maxim/Documents/intership/correction_utils/check_qual/broken/contigs.used_snps"
+__logFile = "../check_qual/corrector1/log.log"
 
 #__contigsFile = "../../runs/ecoli.contigs.fasta"
 #__snpsFile = "../../runs/ecoli-contigs.used_snps"
@@ -43,11 +37,36 @@ class Snp:
     def __str__(self):
         return "<ref: " + str(self.referencePos) + ", contig: " + str(self.contigPos)+ ">"
 
+class CorrectorLog:
+    class Node:
+        def __init__(self, interesting, changed, coverage):
+            self.interesting = interesting
+            self.changed = changed
+            self.coverage = coverage
+
+        def __hash__(self):
+            return hash((self.interesting, self.changed))
+
+        def __eq__(self, other):
+            return (self.interesting, self.changed) == (other.interesting, other.changed)
+
+        def __ne__(self, other):
+            return not (self == other)
+
+        def __str__(self):
+            return "(interesting {}, changed {})".format(self.interesting, self.changed)
+
+    def __init__(self):
+        self.changed = defaultdict(bool)
+        self.interesting = defaultdict(bool)
+        self.coverage = defaultdict(int)
+
+    def get(self, key):
+        if key in self.coverage:
+            return CorrectorLog.Node(self.interesting[key], self.changed[key], self.coverage[key])
+        return None
 
 class Parser:
-    __refFile = "../../runs/MG1655-K12.fasta"
-    reference = list(SeqIO.parse(__refFile, "fasta"))[0]
-        
     @staticmethod
     def parseSnps(snpsFile):
         def toSnp(line):
@@ -80,109 +99,90 @@ class Parser:
                 snpsDict[snp.key()].append(snp)
 
         for key, value in snpsDict.items():
-            snpsDict[key] = splitSnps(sorted(value, key = lambda snp: snp.contigPos.pos))
-        
+            snpsDict[key] = sorted(value, key = lambda snp: snp.contigPos.pos)
         return snpsDict
 
     @staticmethod
-    def parseContigs(contigsFile):
-        return SeqIO.to_dict(SeqIO.parse(contigsFile, "fasta"))
+    def simpleName(name):
+        if not "NODE_" in name:
+            return name
+        (pref, id) = name.split("_")[:2]
+        return "_".join([pref, id])
+
+    @staticmethod
+    def toKey(contig, pos):
+        return (Parser.simpleName(contig), int(pos))
+
+    @staticmethod
+    def parseLog(logFile):
+        interesting_tag = "inited_interesting_pos"
+        changed_tag = "change_pos"
+        tags = [interesting_tag, changed_tag]
+        low_cov = 20
+
+        def checkLine(line):
+            if (not "INFO" in line) and (not "DEBUG" in line):
+                return False
+            for tag in tags:
+                if tag in line:
+                    return True
+            return False
+
+        res = CorrectorLog()
+        with open(logFile) as f:
+            for line in f:
+                if not checkLine(line):
+                    continue
+                _, line = line.split(")   ")
+                line = line.strip()
+                tag = [tag for tag in tags if tag in line][0]
+
+                if (tag == interesting_tag):
+                    (_, pos, _, coverage, _, contig) = line.split()
+                    key = Parser.toKey(contig, pos)
+                    res.interesting[key] = True
+
+                if (tag == changed_tag):
+                    (_, pos, _, _, _, _, coverage, _, contig) = line.split()
+                    key = Parser.toKey(contig, pos)
+                    res.changed[key] = True
 
 
-def printPart(snps, contigsDict):
-    def substr(s, getPos):
-        s = str(s)
-        res = [str(getPos(snps[0]).char)]
-        
-        for i in range(len(snps) - 1):
-            cur = getPos(snps[i])    
-            ne = getPos(snps[i + 1])
-            res.append(s[cur.pos+1:ne.pos+1])
-            if ne.char == ".":
-                res.append(".")
-        return ''.join(res)
+                res.coverage[key] = int(coverage)
 
-    if snps and snps[0].referencePos.pos <= snps[-1].referencePos.pos:
-        first = snps[0]
-        contig = contigsDict[first.key()]
-        last = snps[-1]
+                #print(tag, key, res.coverage[key], res.interesting[key], res.changed[key], end='\n')
+        return res
 
-        conitgStr = []
-        refStr = []
-        
-        sContig = substr(contig.seq, lambda snp: snp.contigPos)
-        sRef = substr(Parser.reference.seq, lambda snp: snp.referencePos)
-
-        diff = []
-        cnt = 0
-        for a, b in zip(list(sContig), list(sRef)):
-            if a != b:
-                cnt += 1
-            if a == b:
-                diff.append('=')
-            elif a == '.' and b == '.':
-                assert true
-            elif a == '.':
-                diff.append('i');
-            elif b == '.':
-                diff.append('d')
-            else:
-                diff.append('m')
-
-        assert cnt == len(snps)
-        assert len(sContig) == len(sRef)
-        
-        print(sContig)
-        print(sRef)
-        
-        print(''.join(diff))
-
-def printSnps(snps, contigsDict):
+def printSnps(snps):
     for snp in snps:
         print("    " + str(snp))
-    printPart(snps, contigsDict)
+
+def checkLog(snpsFile, logFile):
+    snpsDict = Parser.parseSnps(snpsFile)
+    correctorLog = Parser.parseLog(logFile)
+    logStats = defaultdict(list)
+
+    for (contig, snps) in snpsDict.items():
+        for snp in snps:
+            pos = snp.contigPos.pos
+            key = Parser.toKey(contig, pos)
+            logStats[correctorLog.get(key)].append(key)
+            #if (key in correctorLog.coverage):
+            #    print("{} interesting:{} changed:{} coverage:{}".format(key, correctorLog.interesting[key], correctorLog.changed[key], correctorLog.coverage[key]))
+            #else:
+            #    print("skipped {}".format(key))
+
     print()
-
-def getComplementNode(node_name):
-    if (node_name[-1] == "'"):
-        return node_name[:-1]
-    else:
-        return node_name + "'";
-
-links = spades_contig_graph.load_graph_links(__linksFile)
-contigs = spades_contig_graph.load_contigs(__contigsFile)
-paths = spades_contig_graph.load_paths(os.path.abspath(__pathsFile), links)
-
-for key, value in links.items():
-    print(str(key) + ": " + str(value))
-    print()
-
-
-for contig in contigs:
-    print(type(contig))
-    print()
-
-for key, value in paths.items():
-    print(str(key) + ": " + str(value))
-    print()
+    size = sum([len(vals) for (_, vals) in logStats.items()])
+    for (key, vals) in logStats.items():
+        print("{1} {0}".format(key, len(vals) / size))
+        for val in vals:
+            print("   " + str(val))
+        print()
 
 def main():
-    print(len(Parser.reference.seq))
-    
-    contigsDict = Parser.parseContigs(__contigsFile)
-    
-    for key, value in contigsDict.items():
-        print(str(key) + " " + str(len(value.seq)))
-    print()
+    checkLog(__snpsFile, __logFile)
 
-    snpsDict = Parser.parseSnps(__snpsFile)
-    for key, value in snpsDict.items():
-        print(str(key) + " {")
-        for snps in value:
-            printSnps(snps, contigsDict)
-        print("}")
-        print()
-        
 if __name__ == "__main__":
     pass
-    #main()
+    main()
