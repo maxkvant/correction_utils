@@ -35,7 +35,7 @@ spades_dir = "/home/maxim/Documents/intership/algorithmic-biology"
 pwd = os.path.dirname(__file__)
 mismatch_rate = 0
 indel_rate = 0
-dataset = ecoli400K
+dataset = ecoli10K
 
 contigs_file = pwd + "/contigs.fasta"
 shutil.copy(dataset.contigs, contigs_file)
