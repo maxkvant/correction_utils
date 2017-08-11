@@ -1,4 +1,5 @@
 from collections import defaultdict
+import os
 
 __contigsFile = "../../runs/contigs_corrector.fasta"
 __snpsFile = "../../runs/contigs_corrector.used_snps"
@@ -9,7 +10,9 @@ __pathsFile = "../../runs/contigs.paths"
 #__contigsFile = "../../runs/pilon.fasta"
 __snpsFile_before = "/home/m_vinnichenko/intership/output/R.sphaeroides/assembled_contigs.used_snps"
 __snpsFile_after = "/home/m_vinnichenko/intership/output/R.sphaeroides/corrected_contigs.used_snps"
+
 __logFile = "/home/m_vinnichenko/intership/output/R.sphaeroides/run27.log"
+__snpsDir = "/home/m_vinnichenko/intership/output/R.sphaeroides"
 
 
 #__contigsFile = "../../runs/ecoli.contigs.fasta"
@@ -152,7 +155,7 @@ class Parser:
 
                 res.coverage[key] = int(coverage)
 
-                print(tag, key, res.coverage[key], res.interesting[key], res.changed[key], end='\n')
+                #print(tag, key, res.coverage[key], res.interesting[key], res.changed[key], end='\n')
         return res
 
 def printSnps(snps):
@@ -179,11 +182,11 @@ def printLogStats(logStats):
     size = sum([len(vals) for (_, vals) in logStats.items()])
     for (key, vals) in logStats.items():
         print("{1} {0}".format(key, len(vals) / size))
-        for val in vals:
-            print("   " + str(val))
-        print()
+#        for val in vals:
+#            print("   " + str(val))
+#        print()
 
-def defaultDictSetMinus(dict1, dict2):
+def defaultdictSetMinus(dict1, dict2):
     res = defaultdict(set)
     for key in dict1:
         res[key] = dict1[key] - dict2[key]
@@ -193,18 +196,28 @@ def defaultDictSetMinus(dict1, dict2):
 
 def main():
     log_stats_before = getLogStats(__snpsFile_before, __logFile)
-    print("========== BEFORE ==========")
-    printLogStats(log_stats_before)
-    log_stats_after = getLogStats(__snpsFile_after, __logFile)
-    print("========== AFTER ==========")
-    printLogStats(log_stats_after)
+    for __snpsFile_after in os.listdir(__snpsDir):
+        if not __snpsFile_after.endswith(".used_snps"):
+            continue
 
-    print("========== BEFORE - AFTER ==========")
-    printLogStats(defaultDictSetMinus(log_stats_before, log_stats_after))
+        __snpsFile_after = __snpsDir + "/" + __snpsFile_after
+        log_stats_after = getLogStats(__snpsFile_after, __logFile)
 
-    print("========== AFTER - BEFORE ==========")
-    printLogStats(defaultDictSetMinus(log_stats_before, log_stats_after))
+        print("+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+= " + __snpsFile_after)
 
+        print("========== BEFORE ==========")
+        printLogStats(log_stats_before)
+
+        print("========== AFTER ==========")
+        printLogStats(log_stats_after)
+
+        print("========== BEFORE - AFTER ==========")
+        printLogStats(defaultdictSetMinus(log_stats_before, log_stats_after))
+
+        print("========== AFTER - BEFORE ==========")
+        printLogStats(defaultdictSetMinus(log_stats_before, log_stats_after))
+        print()
+        print()
 
 if __name__ == "__main__":
     pass
