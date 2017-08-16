@@ -35,7 +35,7 @@ spades_dir = "/home/maxim/Documents/intership/algorithmic-biology"
 pwd = os.path.dirname(__file__)
 mismatch_rate = 0
 indel_rate = 0
-dataset = ecoli10K
+dataset = ecoli400K
 
 contigs_file = pwd + "/contigs.fasta"
 shutil.copy(dataset.contigs, contigs_file)
@@ -132,6 +132,7 @@ class SpadesCorrector(Corrector):
         with open(self._corrector_config, 'w') as config:
             config.write('"bwa": "{}/assembler/bin/bwa-spades"\n'.format(spades_dir))
             config.write('"dataset": "{}"\n'.format(yml_file))
+            config.write('"log_filename": "log.properties"\n')
             config.write('"max_nthreads": !!int "7"\n')
             config.write('"output_dir": "{}"\n'.format(self.outdir))
             config.write('"strategy": "majority_only"\n')
@@ -143,8 +144,6 @@ class SpadesCorrector(Corrector):
 
         print(cmd_run)
         os.system(cmd_run)
-
-        shutil.rmtree(self._corrector_tmp)
 
 
 def gen_mismatches():
@@ -163,9 +162,9 @@ def main():
     corrector1.run()
     corrector1.show_snps()
 
-    pilon1 = Pilon(contigs_broken_file, dataset, pwd + "/pilon1")
-    pilon1.run()
-    pilon1.show_snps()
+    #pilon1 = Pilon(contigs_broken_file, dataset, pwd + "/pilon1")
+    #pilon1.run()
+    #pilon1.show_snps()
 
     #corrector2 = SpadesCorrector(corrector1.get_corrected_path(), dataset, pwd + "/corrector2")
     #corrector2.run()
@@ -177,7 +176,7 @@ def main():
 
     #corrector1.clean()
     #corrector2.clean()
-    pilon1.clean()
+    #pilon1.clean()
     #pilon2.clean()
 
 main()
